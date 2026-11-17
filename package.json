@@ -1,0 +1,19 @@
+{
+  "name": "@lekalo/postgres",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "bin": {
+    "lekalo-postgres": "bin/lekalo-postgres.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "lekalo.package.json",
+    "README.md"
+  ],
+  "repository": "https://github.com/ichinya/lekalo-postgres",
+  "exports": {
+    "./*": "./src/*"
+  }
+}
