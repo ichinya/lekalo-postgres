@@ -1,26 +1,21 @@
 # lekalo-postgres
 
-Языконезависимый PostgreSQL storage provider для [Lekalo](https://github.com/ichinya/lekalo), общий для PHP, TypeScript, Go и Rust.
+PostgreSQL storage provider, independent of application language and of the Lekalo executable. Owns the version matrix (15–18), type policies, deterministic DDL, defaults, sequence/index names and capability answers. It never opens a database connection or executes SQL.
 
-## Статус
+Build/check: `node scripts/build.mjs`, `node scripts/build.mjs --check`, `node --test test/*.test.mjs`.
 
-Репозиторий подготовлен для выделения существующей реализации. Код ещё не перенесён; пакет пока не готов к установке или использованию.
+The zero-dependency `bin/lekalo-postgres.mjs` speaks `lekalo/runtime/v1` over bounded stdin/stdout. `lekalo.package.json` lets the host resolve this repository by a pinned Git reference or a local package path. Runtime source selection and contract-rule selection stay independent.
 
-- Перенос реализации: [#1](https://github.com/ichinya/lekalo-postgres/issues/1).
-- Общий план: [lekalo#241](https://github.com/ichinya/lekalo/issues/241).
+The current legacy storage CLI selects its provider through `LEKALO_STORAGE_PROVIDER`, encoded as a JSON Source:
 
-## Ответственность пакета
+```sh
+export LEKALO_STORAGE_PROVIDER='"path:/absolute/path/lekalo-postgres"'
+# Or an independently installed executable/bundle:
+export LEKALO_STORAGE_PROVIDER='{"command":["node","/absolute/path/bin/lekalo-postgres.mjs"]}'
+```
 
-- PostgreSQL-specific отображение типов и quoting идентификаторов.
-- Матрица возможностей и версий PostgreSQL, engine policies и capability snapshots.
-- Детерминированная генерация PostgreSQL DDL и специфичные правила миграций/drift.
+The host validates its model/projection binding, sends data, confines the process and validates the reply. There is no library linkage to this repository and no embedded SQL fallback. Missing/malformed providers fail closed. The legacy default executable name is `lekalo-postgres`.
 
-## Источник переноса
+Operations: `storage.matrix`, `storage.type`, `storage.ddl`, `storage.table`, `storage.join`, `storage.default`, `storage.sequence`, `storage.index-name`. Each result is `{value:...}` or `{error:{kind:"mapping"|"render",detail:...}}`, echoed in the standard response envelope. Types, defaults, indexes and derived tables are JSON data; integer literals cross as decimal strings to preserve i64 precision. `describe` advertises the operation set. `check` accepts no contract rules: this storage provider does not claim to analyze application source code.
 
-`lekalo/crates/lekalo-core/src/storage_engine/postgres/{ddl,quoting,types,snapshot,version_matrix}.rs` и PostgreSQL-specific ветки storage drift/conformance.
-
-## Границы
-
-Общие storage contracts, Model/IR, проверка evidence, permissions, credentials и разрешение применения плана остаются у host. Пакет не получает право исполнять SQL из-за генерации DDL. ORM bindings принадлежат Laravel/Drizzle и другим framework-пакетам.
-
-Версия пакета, версия provider/protocol API и версия языка или движка приложения фиксируются отдельно. Сборка и тесты должны быть автономными; источники и зависимости закрепляются точными версиями и digest. Выбор произвольного совместимого Git/local package и загрузка его зависимостей отслеживаются в [lekalo#239](https://github.com/ichinya/lekalo/issues/239).
+The legacy host still owns model admission, migration orchestration and drift comparison. Their existing calls now use this provider for the extracted DDL primitives; further removal of PostgreSQL-specific migration/drift policy is tracked separately. Do not interpret this extraction as completion of the entire storage plugin API.

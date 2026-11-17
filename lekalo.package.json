@@ -1,0 +1,13 @@
+{
+  "schema": "lekalo/package/v1",
+  "id": "lekalo-postgres",
+  "version": "0.1.0",
+  "kind": "runtime",
+  "command": [
+    "node",
+    "bin/lekalo-postgres.mjs"
+  ],
+  "files": [
+    "bin/lekalo-postgres.mjs"
+  ]
+}
