@@ -4,6 +4,11 @@ PostgreSQL storage provider, independent of application language and of the Leka
 
 ## Go executable
 
+Download a tested binary for Linux x64, Windows x64, or macOS ARM64
+from the Artifacts section of a successful Package CI run. Each archive
+contains the standalone executable. Unpack it before use. CI artifacts
+are available for seven days. [Package CI](https://github.com/ichinya/lekalo-postgres/actions/workflows/ci.yml)
+
 Build from the repository root with Go 1.24 or newer:
 
 ```sh

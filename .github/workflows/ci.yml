@@ -8,7 +8,34 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: test
+            runner: ubuntu-latest
+            platform: linux-amd64
+            binary: lekalo-postgres
+            extension: tar.gz
+          - name: test (Windows x64)
+            runner: windows-latest
+            platform: windows-amd64
+            binary: lekalo-postgres.exe
+            extension: zip
+          - name: test (macOS ARM64)
+            runner: macos-15
+            platform: darwin-arm64
+            binary: lekalo-postgres
+            extension: tar.gz
+    defaults:
+      run:
+        shell: bash
+    env:
+      CGO_ENABLED: '0'
+      BINARY: ${{ matrix.binary }}
+      ARCHIVE: lekalo-postgres-${{ matrix.platform }}-${{ github.run_attempt }}.${{ matrix.extension }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -20,12 +47,24 @@ jobs:
           go-version: '1.24.x'
           cache: false
       - run: go test ./...
-        env:
-          CGO_ENABLED: '0'
-      - run: go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/lekalo-postgres" .
-        env:
-          CGO_ENABLED: '0'
+      - name: Build the native executable
+        run: |
+          test "$(go env GOOS)-$(go env GOARCH)" = '${{ matrix.platform }}'
+          go build -trimpath -ldflags="-s -w" -o "$BINARY" .
       - run: node scripts/build.mjs --check
       - run: node --test test/provider.test.mjs
         env:
-          LEKALO_POSTGRES_GO_BIN: ${{ runner.temp }}/lekalo-postgres
+          LEKALO_POSTGRES_GO_BIN: ${{ github.workspace }}/${{ matrix.binary }}
+      - name: Package the Unix executable
+        if: runner.os != 'Windows'
+        run: tar -czf "$ARCHIVE" "$BINARY"
+      - name: Package the Windows executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -LiteralPath $env:BINARY -DestinationPath $env:ARCHIVE
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
