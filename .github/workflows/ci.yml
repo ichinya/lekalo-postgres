@@ -17,25 +17,21 @@ jobs:
           - name: test
             runner: ubuntu-latest
             platform: linux-amd64
-            binary: lekalo-postgres
-            extension: tar.gz
+            suffix: ''
           - name: test (Windows x64)
             runner: windows-latest
             platform: windows-amd64
-            binary: lekalo-postgres.exe
-            extension: zip
+            suffix: .exe
           - name: test (macOS ARM64)
             runner: macos-15
             platform: darwin-arm64
-            binary: lekalo-postgres
-            extension: tar.gz
+            suffix: ''
     defaults:
       run:
         shell: bash
     env:
       CGO_ENABLED: '0'
-      BINARY: ${{ matrix.binary }}
-      ARCHIVE: lekalo-postgres-${{ matrix.platform }}-${{ github.run_attempt }}.${{ matrix.extension }}
+      BINARY: lekalo-postgres-${{ matrix.platform }}-${{ github.run_attempt }}${{ matrix.suffix }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -54,17 +50,10 @@ jobs:
       - run: node scripts/build.mjs --check
       - run: node --test test/provider.test.mjs
         env:
-          LEKALO_POSTGRES_GO_BIN: ${{ github.workspace }}/${{ matrix.binary }}
-      - name: Package the Unix executable
-        if: runner.os != 'Windows'
-        run: tar -czf "$ARCHIVE" "$BINARY"
-      - name: Package the Windows executable
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -LiteralPath $env:BINARY -DestinationPath $env:ARCHIVE
+          LEKALO_POSTGRES_GO_BIN: ${{ github.workspace }}/${{ env.BINARY }}
       - uses: actions/upload-artifact@v7
         with:
-          path: ${{ env.ARCHIVE }}
+          path: ${{ env.BINARY }}
           archive: false
           if-no-files-found: error
           retention-days: 7
