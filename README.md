@@ -2,17 +2,41 @@
 
 PostgreSQL storage provider, independent of application language and of the Lekalo executable. Owns the version matrix (15–18), type policies, deterministic DDL, defaults, sequence/index names and capability answers. It never opens a database connection or executes SQL.
 
-Build/check: `node scripts/build.mjs`, `node scripts/build.mjs --check`, `node --test test/*.test.mjs`.
+## Go executable
 
-The zero-dependency `bin/lekalo-postgres.mjs` speaks `lekalo/runtime/v1` over bounded stdin/stdout. `lekalo.package.json` lets the host resolve this repository by a pinned Git reference or a local package path. Runtime source selection and contract-rule selection stay independent.
-
-The current legacy storage CLI selects its provider through `LEKALO_STORAGE_PROVIDER`, encoded as a JSON Source:
+Build from the repository root with Go 1.24 or newer:
 
 ```sh
-export LEKALO_STORAGE_PROVIDER='"path:/absolute/path/lekalo-postgres"'
-# Or an independently installed executable/bundle:
-export LEKALO_STORAGE_PROVIDER='{"command":["node","/absolute/path/bin/lekalo-postgres.mjs"]}'
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ./lekalo-postgres .
+go test ./...
 ```
+
+Put the resulting executable on `PATH` as `lekalo-postgres` to use the
+default provider selection. An absolute executable path can also be
+selected for individual invocations:
+
+```sh
+export LEKALO_STORAGE_PROVIDER='{"command":["/absolute/path/lekalo-postgres"]}'
+```
+
+The executable uses only the Go standard library. Set `GOOS` and `GOARCH`
+with `CGO_ENABLED=0` to build for another platform.
+
+## Git package compatibility
+
+The current Git package manifest points to the checked-in JavaScript
+bundle so pinned packages continue to resolve through Git without a build
+step. Existing `path:` and Git package sources can still be selected
+with `LEKALO_STORAGE_PROVIDER`. The two launchers share the same version
+matrix and runtime protocol.
+
+```sh
+node scripts/build.mjs --check
+LEKALO_POSTGRES_GO_BIN="$PWD/lekalo-postgres" node --test test/provider.test.mjs
+```
+
+Use `node scripts/build.mjs` to rebuild the JavaScript bundle after changes
+to its sources or the shared matrix.
 
 The host validates its model/projection binding, sends data, confines the process and validates the reply. There is no library linkage to this repository and no embedded SQL fallback. Missing/malformed providers fail closed. The legacy default executable name is `lekalo-postgres`.
 

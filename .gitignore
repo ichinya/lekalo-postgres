@@ -2,3 +2,5 @@
 .repowise/
 node_modules/
 *.tgz
+/lekalo-postgres
+/lekalo-postgres.exe
