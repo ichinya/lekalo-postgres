@@ -1,0 +1,2 @@
+*.mjs text eol=lf
+/src/matrix.json text eol=lf

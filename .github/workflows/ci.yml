@@ -8,7 +8,30 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: test
+            runner: ubuntu-latest
+            platform: linux-amd64
+            suffix: ''
+          - name: test (Windows x64)
+            runner: windows-latest
+            platform: windows-amd64
+            suffix: .exe
+          - name: test (macOS ARM64)
+            runner: macos-15
+            platform: darwin-arm64
+            suffix: ''
+    defaults:
+      run:
+        shell: bash
+    env:
+      CGO_ENABLED: '0'
+      BINARY: lekalo-postgres-${{ matrix.platform }}-${{ github.run_attempt }}${{ matrix.suffix }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -20,12 +43,17 @@ jobs:
           go-version: '1.24.x'
           cache: false
       - run: go test ./...
-        env:
-          CGO_ENABLED: '0'
-      - run: go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/lekalo-postgres" .
-        env:
-          CGO_ENABLED: '0'
+      - name: Build the native executable
+        run: |
+          test "$(go env GOOS)-$(go env GOARCH)" = '${{ matrix.platform }}'
+          go build -trimpath -ldflags="-s -w" -o "$BINARY" .
       - run: node scripts/build.mjs --check
       - run: node --test test/provider.test.mjs
         env:
-          LEKALO_POSTGRES_GO_BIN: ${{ runner.temp }}/lekalo-postgres
+          LEKALO_POSTGRES_GO_BIN: ${{ github.workspace }}/${{ env.BINARY }}
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.BINARY }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
